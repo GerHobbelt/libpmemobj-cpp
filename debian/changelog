@@ -1,3 +1,24 @@
+libpmemobj-cpp (1.12-1~bpo10+1) buster-backports; urgency=medium
+
+  * Update the backport.
+
+ -- Adam Borowski <kilobyte@angband.pl>  Mon, 08 Mar 2021 01:26:21 +0100
+
+libpmemobj-cpp (1.12-1) unstable; urgency=medium
+
+  * Upstream release, upload to unstable.
+
+ -- Adam Borowski <kilobyte@angband.pl>  Mon, 15 Feb 2021 13:31:08 +0100
+
+libpmemobj-cpp (1.12~rc1-1) experimental; urgency=medium
+
+  * New upstream RC.
+  * Depend on pmdk 1.9.
+  * Enable arm64 and ppc64el.
+  * Disable test: cond_var_posix_0_helgrind
+
+ -- Adam Borowski <kilobyte@angband.pl>  Fri, 05 Feb 2021 00:02:32 +0100
+
 libpmemobj-cpp (1.11-1~bpo10+1) buster-backports; urgency=medium
 
   * Backport to Buster.

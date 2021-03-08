@@ -2,18 +2,18 @@ Source: libpmemobj-cpp
 Priority: optional
 Maintainer: Adam Borowski <kilobyte@angband.pl>
 Build-Depends: cmake,
-               debhelper-compat (= 12),
+               debhelper-compat (= 13),
                doxygen,
                gdb,
                graphviz,
                libncurses5-dev,
-               libpmemobj-dev (>= 1.8~),
+               libpmemobj-dev (>= 1.9~),
                libsfml-dev,
                libtbb-dev,
                libunwind-dev,
                pkg-config,
                valgrind
-Standards-Version: 4.5.0
+Standards-Version: 4.5.1
 Rules-Requires-Root: no
 Section: libs
 Homepage: https://pmem.io/pmdk/cpp_obj/
@@ -22,9 +22,9 @@ Vcs-Git: https://github.com/kilobyte/libpmemobj-cpp.git -b debian
 
 Package: libpmemobj-cpp-dev
 Section: libdevel
-Architecture: amd64
+Architecture: amd64 arm64 ppc64el
 Multi-Arch: same
-Depends: libpmemobj-dev (>= 1.8~), ${misc:Depends}, ${shlibs:Depends}
+Depends: libpmemobj-dev (>= 1.9~), ${misc:Depends}, ${shlibs:Depends}
 Description: C++ bindings to libpmemobj
  The C++ bindings provide an easier to use (and thus less error prone
  version) of libpmemobj -- the persistent memory object store -- through
