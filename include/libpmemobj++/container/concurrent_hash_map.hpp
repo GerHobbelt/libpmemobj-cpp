@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-/* Copyright 2019-2020, Intel Corporation */
+/* Copyright 2019-2021, Intel Corporation */
 
 /**
  * @file
@@ -1028,7 +1028,7 @@ public:
 
 	/*
 	 * Should be called before concurrent_hash_map destructor is called.
-	 * Otherwise, program can terminate if an exception occurs wile freeing
+	 * Otherwise, program can terminate if an exception occurs while freeing
 	 * memory inside dtor.
 	 */
 	void
@@ -1965,12 +1965,12 @@ protected:
 	{
 		if (layout_features.incompat != header_features().incompat)
 			throw pmem::layout_error(
-				"Incompat flags mismatch, for more details go to: https://pmem.io/pmdk/cpp_obj/ \n");
+				"Incompat flags mismatch, for more details go to: https://pmem.io/libpmemobj-cpp\n");
 
 		if ((layout_features.compat & FEATURE_CONSISTENT_SIZE) &&
 		    this->value_size != sizeof(value_type))
 			throw pmem::layout_error(
-				"Size of value_type is different than the one stored in the pool \n");
+				"Size of value_type is different than the one stored in the pool\n");
 	}
 
 public:
@@ -2828,7 +2828,7 @@ public:
 	 *	[start_percent, start_percent + amount_percent]
 	 *	is incorrect.
 	 *
-	 * @throw rethrows pmem::defrag_error when a failure during
+	 * @throw pmem::defrag_error rethrows defrag_error when a failure during
 	 *	defragmentation occurs. Even if this error is thrown,
 	 *	some of objects could have been relocated,
 	 *	see in such case defrag_error.result for summary stats.

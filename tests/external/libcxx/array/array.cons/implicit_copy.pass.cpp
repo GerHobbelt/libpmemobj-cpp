@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright 2018-2020, Intel Corporation
+// Copyright 2018-2021, Intel Corporation
 //
 // Modified to test pmem::obj containers
 //
@@ -48,49 +48,19 @@ struct Testcase1 {
 
 struct Testcase2 {
 	typedef double T;
-	typedef pmem::obj::array<const T, 3> C;
-	C c = {{1.1, 2.2, 3.3}};
+	typedef pmem::obj::array<T, 0> C;
+	C c = {{}};
 	C c2 = c;
-
 	void
 	run()
 	{
-		((void)c2);
+		c2 = c;
 		static_assert(std::is_copy_constructible<C>::value, "");
+		static_assert(std::is_copy_assignable<C>::value, "");
 	}
 };
 
 struct Testcase3 {
-	typedef double T;
-	typedef pmem::obj::array<T, 0> C;
-	C c = {{}};
-	C c2 = c;
-	void
-	run()
-	{
-		c2 = c;
-		static_assert(std::is_copy_constructible<C>::value, "");
-		static_assert(std::is_copy_assignable<C>::value, "");
-	}
-};
-
-struct Testcase4 {
-	// const arrays of size 0 should disable the implicit copy
-	// assignment operator.
-	typedef double T;
-	typedef pmem::obj::array<const T, 0> C;
-	C c = {{}};
-	C c2 = c;
-
-	void
-	run()
-	{
-		((void)c2);
-		static_assert(std::is_copy_constructible<C>::value, "");
-	}
-};
-
-struct Testcase5 {
 	typedef NoDefault T;
 	typedef pmem::obj::array<T, 0> C;
 	C c = {{}};
@@ -102,19 +72,6 @@ struct Testcase5 {
 		c2 = c;
 		static_assert(std::is_copy_constructible<C>::value, "");
 		static_assert(std::is_copy_assignable<C>::value, "");
-	}
-};
-
-struct Testcase6 {
-	typedef NoDefault T;
-	typedef pmem::obj::array<const T, 0> C;
-	C c = {{}};
-	C c2 = c;
-	void
-	run()
-	{
-		((void)c2);
-		static_assert(std::is_copy_constructible<C>::value, "");
 	}
 };
 
@@ -122,9 +79,6 @@ struct root {
 	pmem::obj::persistent_ptr<Testcase1> r1;
 	pmem::obj::persistent_ptr<Testcase2> r2;
 	pmem::obj::persistent_ptr<Testcase3> r3;
-	pmem::obj::persistent_ptr<Testcase4> r4;
-	pmem::obj::persistent_ptr<Testcase5> r5;
-	pmem::obj::persistent_ptr<Testcase6> r6;
 };
 
 void
@@ -138,20 +92,11 @@ run(pmem::obj::pool<root> &pop)
 				pmem::obj::make_persistent<Testcase2>();
 			pop.root()->r3 =
 				pmem::obj::make_persistent<Testcase3>();
-			pop.root()->r4 =
-				pmem::obj::make_persistent<Testcase4>();
-			pop.root()->r5 =
-				pmem::obj::make_persistent<Testcase5>();
-			pop.root()->r6 =
-				pmem::obj::make_persistent<Testcase6>();
 		});
 
 		pop.root()->r1->run();
 		pop.root()->r2->run();
 		pop.root()->r3->run();
-		pop.root()->r4->run();
-		pop.root()->r5->run();
-		pop.root()->r6->run();
 	} catch (...) {
 		UT_ASSERT(0);
 	}
@@ -175,6 +120,8 @@ test(int argc, char *argv[])
 	}
 
 	run(pop);
+
+	pop.close();
 }
 
 int

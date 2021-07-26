@@ -8,25 +8,19 @@ include(ctest_helpers.cmake)
 # ----------------------------------------------------------------- #
 add_custom_target(tests)
 
-# Try to find it for some tests using TBB
-include(tbb)
-
 # Add checks when DEVELOPER_MODE is ON
-add_cppstyle(tests-common ${CMAKE_CURRENT_SOURCE_DIR}/common/*.*pp
-						  ${CMAKE_CURRENT_SOURCE_DIR}/*.c
-						  ${CMAKE_CURRENT_SOURCE_DIR}/*.h
-						  ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
-						  ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
-						  ${CMAKE_CURRENT_SOURCE_DIR}/check_is_pmem/*.*pp
-						  ${CMAKE_CURRENT_SOURCE_DIR}/container_generic/*.*pp)
+set(common_files ${CMAKE_CURRENT_SOURCE_DIR}/common/*.*pp
+				 ${CMAKE_CURRENT_SOURCE_DIR}/*.c
+				 ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+				 ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
+				 ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
+				 ${CMAKE_CURRENT_SOURCE_DIR}/check_is_pmem/*.*pp
+				 ${CMAKE_CURRENT_SOURCE_DIR}/container_generic/*.*pp
+				 ${CMAKE_CURRENT_SOURCE_DIR}/radix_tree/*.*pp
+				 ${CMAKE_CURRENT_SOURCE_DIR}/mpsc_queue/*.*pp)
 
-add_check_whitespace(tests-common ${CMAKE_CURRENT_SOURCE_DIR}/common/*.*pp
-								  ${CMAKE_CURRENT_SOURCE_DIR}/*.c
-								  ${CMAKE_CURRENT_SOURCE_DIR}/*.h
-								  ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
-								  ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp
-								  ${CMAKE_CURRENT_SOURCE_DIR}/check_is_pmem/*.*pp
-								  ${CMAKE_CURRENT_SOURCE_DIR}/container_generic/*.*pp)
+add_cppstyle(tests-common ${common_files})
+add_check_whitespace(tests-common ${common_files})
 add_check_whitespace(tests-cmake ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt)
 
 # Set up compilation flags
@@ -63,6 +57,7 @@ add_flag(-Wsign-compare)
 add_flag(-Wunreachable-code-return)
 add_flag(-Wmissing-variable-declarations)
 add_flag(-fno-common)
+add_flag(-Wno-maybe-uninitialized)
 
 add_flag(-ggdb DEBUG)
 add_flag(-DDEBUG DEBUG)
@@ -78,9 +73,11 @@ if(COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -coverage")
 endif()
 
-# Prepare additional libraries/executables and finding required packages
+# Prepare additional libraries/executables and find packages required for tests
 find_packages()
-find_gdb()
+
+# Try to find it for some tests using TBB
+include(tbb)
 
 add_library(test_backtrace STATIC test_backtrace.c)
 if(LIBUNWIND_FOUND)
@@ -91,6 +88,25 @@ add_library(valgrind_internal STATIC valgrind_internal.cpp)
 
 add_executable(check_is_pmem check_is_pmem/check_is_pmem.cpp)
 target_link_libraries(check_is_pmem ${LIBPMEM_LIBRARIES})
+
+# Set variable to know if debug tests can be run
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+	set(DEBUG_BUILD_TESTS 1)
+endif()
+
+# Set variable if currently used compiler is GNU (gcc)
+if("${CMAKE_C_COMPILER_ID}" MATCHES "GNU" AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+	set(GCC_COMPILER_IN_USE 1)
+endif()
+
+# Produce general warnings, e.g. when a command/tool is missing
+if(NOT GDB_FOUND)
+	message(WARNING "GDB was not found - skipping some tests. To fix, make sure `gdb` command is OS-wide accessible.")
+endif()
+
+if(NOT PMREORDER_SUPPORTED)
+	message(WARNING "Skipping pmreorder tests because of no pmreorder support")
+endif()
 
 # ----------------------------------------------------------------- #
 ## Tests
@@ -117,11 +133,8 @@ if(BUILD_EXAMPLES AND NO_GCC_VARIADIC_TEMPLATE_BUG)
 	if(CURSES_FOUND AND NOT WIN32)
 		build_example_pman()
 		add_test_generic(NAME ex-pman CASE 0 TRACERS none SCRIPT ex-pman/ex-pman_0.cmake)
-	elseif(NOT WIN32)
-		message(WARNING "ncurses not found - pman test won't be build")
 	endif()
 elseif(BUILD_EXAMPLES)
-	message(WARNING "Skipping examples tests because of gcc variadic template bug")
 	skip_test("examples_tests" "SKIPPED_BECAUSE_OF_GCC_VARIADIC_TEMPLATE_BUG")
 endif()
 
@@ -133,6 +146,9 @@ else()
 	message(WARNING "Skipping aggregate initialization test because of no compiler support")
 	skip_test("aggregate_initialization" "SKIPPED_BECAUSE_OF_NO_COMPILER_SUPPORT")
 endif()
+
+build_test(helpers_test common/helpers_test.cpp)
+add_test_generic(NAME helpers_test TRACERS none memcheck)
 
 build_test(allocator allocator/allocator.cpp)
 add_test_generic(NAME allocator TRACERS none memcheck pmemcheck)
@@ -161,6 +177,12 @@ add_test_generic(NAME pool CASE 2 TRACERS none)
 add_test_generic(NAME pool CASE 3 TRACERS none)
 add_test_generic(NAME pool CASE 4 TRACERS none)
 add_test_generic(NAME pool CASE 5 TRACERS none)
+add_test_generic(NAME pool CASE 6 TRACERS none)
+add_test_generic(NAME pool CASE 7 TRACERS none)
+if (NOT WIN32)
+	add_test_generic(NAME pool CASE 8 TRACERS none)
+endif()
+add_test_generic(NAME pool CASE 9 TRACERS none)
 
 if(WIN32)
 	build_test(pool_win pool/pool_win.cpp)
@@ -189,8 +211,11 @@ if(NOT USE_ASAN)
 	add_test_generic(NAME ptr_arith TRACERS none)
 endif()
 
-build_test(p_ext p_ext/p_ext.cpp)
-add_test_generic(NAME p_ext TRACERS none pmemcheck)
+if(NOT USE_UBSAN)
+	# We want to test overflow which is reported by UBSAN
+	build_test(p_ext p_ext/p_ext.cpp)
+	add_test_generic(NAME p_ext TRACERS none pmemcheck)
+endif()
 
 if(NOT WIN32)
 	build_test(shared_mutex_posix mutex/shared_mutex_posix.cpp)
@@ -276,6 +301,9 @@ add_test_generic(NAME string_view TRACERS none memcheck)
 build_test(inline_string inline_string/inline_string.cpp)
 add_test_generic(NAME inline_string TRACERS none memcheck pmemcheck)
 
+build_test(ebr ebr/ebr.cpp)
+add_test_generic(NAME ebr TRACERS none memcheck pmemcheck drd) # XXX: helgrind - ebr.hpp needs helgrind's annotations.
+
 if(TEST_SELF_RELATIVE_POINTER)
 	build_test(self_relative_ptr ptr/self_relative_ptr.cpp)
 	add_test_generic(NAME self_relative_ptr TRACERS none memcheck pmemcheck)
@@ -283,10 +311,10 @@ if(TEST_SELF_RELATIVE_POINTER)
 	build_test(self_relative_ptr_arith ptr/self_relative_ptr_arith.cpp)
 	add_test_generic(NAME self_relative_ptr_arith TRACERS none memcheck pmemcheck)
 
-	build_test_atomic(self_relative_ptr_atomic ptr/self_relative_ptr_atomic.cpp)
+	build_test(self_relative_ptr_atomic ptr/self_relative_ptr_atomic.cpp)
 	add_test_generic(NAME self_relative_ptr_atomic TRACERS none memcheck drd helgrind)
 
-	build_test_atomic(self_relative_ptr_atomic_pmem ptr/self_relative_ptr_atomic_pmem.cpp)
+	build_test(self_relative_ptr_atomic_pmem ptr/self_relative_ptr_atomic_pmem.cpp)
 	add_test_generic(NAME self_relative_ptr_atomic_pmem TRACERS none memcheck pmemcheck drd helgrind)
 endif()
 
@@ -326,8 +354,10 @@ if(TEST_ARRAY)
 		build_test(array_slice_pmreorder array/array_slice_pmreorder.cpp)
 		add_test_generic(NAME array_slice_pmreorder CASE 0 TRACERS none SCRIPT array/array_slice_pmreorder_0.cmake)
 		add_test_generic(NAME array_slice_pmreorder CASE 1 TRACERS none SCRIPT array/array_slice_pmreorder_1.cmake)
-	else()
-		message(WARNING "Skipping pmreorder tests because of no pmreorder support")
+	endif()
+	if(CXX_STANDARD GREATER 14)
+		build_test(array_is_aggregate array/array_is_aggregate.cpp)
+		add_test_generic(NAME array_is_aggregate TRACERS none)
 	endif()
 endif()
 ################################################################################
@@ -563,8 +593,11 @@ if(TEST_CONCURRENT_HASHMAP)
 	build_test(concurrent_hash_map_singlethread concurrent_hash_map/concurrent_hash_map_singlethread.cpp)
 	add_test_generic(NAME concurrent_hash_map_singlethread TRACERS none memcheck pmemcheck)
 
-	build_test(concurrent_hash_map_layout concurrent_hash_map/concurrent_hash_map_layout.cpp)
-	add_test_generic(NAME concurrent_hash_map_layout TRACERS none)
+	if(NOT USE_UBSAN)
+		# ASSERT_ALIGNED_FIELD is not compatible with UBSAN
+		build_test(concurrent_hash_map_layout concurrent_hash_map/concurrent_hash_map_layout.cpp)
+		add_test_generic(NAME concurrent_hash_map_layout TRACERS none)
+	endif()
 
 	if(GDB_FOUND)
 		build_test(concurrent_hash_map_rehash_break concurrent_hash_map_rehash_break/concurrent_hash_map_rehash_break.cpp)
@@ -578,8 +611,6 @@ if(TEST_CONCURRENT_HASHMAP)
 				add_test_generic(NAME concurrent_hash_map_rehash_break CASE ${TESTCASE} TRACERS none)
 			endforeach()
 		endif()
-	else()
-		message(WARNING "Skipping concurrent_hash_map_rehash_break test because GDB was not found")
 	endif()
 
 	if(NOT TESTS_TBB)
@@ -629,11 +660,7 @@ if(TEST_CONCURRENT_HASHMAP)
 				configure_file("${CMAKE_SCRIPT}.cmake.in" "${CMAKE_SCRIPT}_${case}.cmake" @ONLY)
 				add_test_generic(NAME ${TEST} CASE ${case} TRACERS none)
 			endforeach()
-		else()
-			message(WARNING "Skipping concurrent_hash_map_pmreorder_break_insert test because GDB was not found")
 		endif()
-	else()
-		message(WARNING "Skipping pmreorder tests because of no pmreorder support")
 	endif()
 endif()
 ################################################################################
@@ -897,16 +924,17 @@ if(TEST_CONCURRENT_MAP)
 	add_test_generic(NAME concurrent_map_find_lower_lower_eq TRACERS none memcheck pmemcheck)
 
 	if(TESTS_CONCURRENT_GDB AND GDB_FOUND)
-		if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+		# This test is confirmed to run on gcc (and not on clang)
+		if(DEBUG_BUILD_TESTS AND GCC_COMPILER_IN_USE)
 			build_test(concurrent_map_mt_gdb concurrent_map_mt_gdb/concurrent_map_mt_gdb.cpp)
 			add_test_generic(NAME concurrent_map_mt_gdb TRACERS none CASE 0 SCRIPT concurrent_map_mt_gdb/concurrent_map_mt_gdb_0.cmake)
 			add_test_generic(NAME concurrent_map_mt_gdb TRACERS none CASE 1 SCRIPT concurrent_map_mt_gdb/concurrent_map_mt_gdb_1.cmake)
 			add_test_generic(NAME concurrent_map_mt_gdb TRACERS none CASE 2 SCRIPT concurrent_map_mt_gdb/concurrent_map_mt_gdb_2.cmake)
+		elseif(NOT DEBUG_BUILD_TESTS)
+			message(WARNING "TESTS_CONCURRENT_GDB is set, but it's a non-debug build - concurrent_map_mt_gdb test will be skipped.")
 		else()
-			message(WARNING "Skipping concurrent_map_mt_gdb test because it is non-debug build")
+			message(WARNING "TESTS_CONCURRENT_GDB is set, but current compiler is not gcc (concurrent_map_mt_gdb seems to work only with it). Skipping.")
 		endif()
-	elseif(TESTS_CONCURRENT_GDB)
-		message(WARNING "Skipping concurrent_map_mt_gdb test because GDB was not found")
 	endif()
 
 	build_test(concurrent_map_insert_reopen concurrent_map/concurrent_map_insert_reopen.cpp)
@@ -937,11 +965,45 @@ if(TEST_CONCURRENT_MAP)
 				configure_file("${CMAKE_SCRIPT}.cmake.in" "${CMAKE_SCRIPT}_${case}.cmake" @ONLY)
 				add_test_generic(NAME ${TEST} CASE ${case} TRACERS none)
 			endforeach()
-		else()
-			message(WARNING "Skipping concurrent_map_pmreorder_break_insert test because GDB was not found")
 		endif()
-	else()
-		message(WARNING "Skipping pmreorder tests because of no pmreorder support")
+	endif()
+endif()
+
+################################################################################
+#################################### MPSC_QUEUE ################################
+if(TEST_MPSC_QUEUE)
+	# Test for internal implementation of ringbuffer
+	build_test(ringbuf mpsc_queue/ringbuf.cpp)
+	add_test_generic(NAME ringbuf TRACERS none memcheck drd helgrind)
+
+	# XXX: debug this test
+	# build_test(mpsc_queue_mt mpsc_queue/mt.cpp)
+	# add_test_generic(NAME mpsc_queue_mt TRACERS none drd helgrind memcheck pmemcheck)
+
+	build_test(mpsc_queue_consume_multipass mpsc_queue/consume_multipass.cpp)
+	add_test_generic(NAME mpsc_queue_consume_multipass TRACERS none memcheck pmemcheck)
+
+	build_test(mpsc_queue_consume_interrupt mpsc_queue/consume_interrupt.cpp)
+	add_test_generic(NAME mpsc_queue_consume_interrupt SCRIPT mpsc_queue/mpsc_queue_consume_interrupt.cmake TRACERS none memcheck pmemcheck)
+
+	build_test(mpsc_queue_basic mpsc_queue/basic.cpp)
+	add_test_generic(NAME mpsc_queue_basic SCRIPT mpsc_queue/basic.cmake TRACERS none memcheck pmemcheck)
+
+	build_test(mpsc_queue_empty mpsc_queue/empty.cpp)
+	add_test_generic(NAME mpsc_queue_empty TRACERS none memcheck pmemcheck)
+
+	build_test(mpsc_queue_recovery_order mpsc_queue/recovery_order.cpp)
+	add_test_generic(NAME mpsc_queue_recovery_order SCRIPT mpsc_queue/recovery_order.cmake TRACERS none memcheck pmemcheck)
+
+	if(PMREORDER_SUPPORTED)
+		build_test(mpsc_queue_recovery_pmreorder mpsc_queue/pmreorder/recovery.cpp)
+		add_test_generic(NAME mpsc_queue_recovery_pmreorder CASE 0 SCRIPT mpsc_queue/pmreorder/recovery_0.cmake TRACERS none)
+		add_test_generic(NAME mpsc_queue_recovery_pmreorder CASE 1 SCRIPT mpsc_queue/pmreorder/recovery_1.cmake TRACERS none)
+		add_test_generic(NAME mpsc_queue_recovery_pmreorder CASE 2 SCRIPT mpsc_queue/pmreorder/recovery_2.cmake TRACERS none)
+		add_test_generic(NAME mpsc_queue_recovery_pmreorder CASE 3 SCRIPT mpsc_queue/pmreorder/recovery_3.cmake TRACERS none)
+
+		build_test(mpsc_queue_recovery_after_consume_pmreorder mpsc_queue/pmreorder/recovery_after_consume.cpp)
+		add_test_generic(NAME mpsc_queue_recovery_after_consume_pmreorder SCRIPT mpsc_queue/pmreorder/recovery_after_consume.cmake TRACERS none)
 	endif()
 endif()
 ################################################################################
@@ -953,11 +1015,26 @@ if(TEST_RADIX_TREE)
 	build_test(radix_basic radix_tree/radix_basic.cpp)
 	add_test_generic(NAME radix_basic TRACERS none memcheck pmemcheck)
 
+	build_test_ext(NAME radix_concurrent SRC_FILES radix_tree/radix_concurrent.cpp)
+	add_test_generic(NAME radix_concurrent TRACERS none memcheck pmemcheck drd helgrind)
+
+	build_test_ext(NAME radix_concurrent_iterate SRC_FILES radix_tree/radix_concurrent_iterate.cpp)
+	add_test_generic(NAME radix_concurrent_iterate TRACERS none memcheck pmemcheck drd helgrind)
+
+	build_test_ext(NAME radix_concurrent_overwrite SRC_FILES radix_tree/radix_concurrent_overwrite.cpp)
+	add_test_generic(NAME radix_concurrent_overwrite TRACERS none memcheck pmemcheck drd helgrind)
+
+	build_test_ext(NAME radix_concurrent_erase SRC_FILES radix_tree/radix_concurrent_erase.cpp)
+	add_test_generic(NAME radix_concurrent_erase TRACERS none memcheck pmemcheck drd helgrind)
+
 	build_test_ext(NAME radix_ctor_exceptions_nopmem SRC_FILES map/map_ctor_exception_nopmem.cpp BUILD_OPTIONS -DLIBPMEMOBJ_CPP_TESTS_RADIX)
 	add_test_generic(NAME radix_ctor_exceptions_nopmem TRACERS none memcheck pmemcheck)
 
 	build_test_ext(NAME radix_ctor_exceptions_notx SRC_FILES map/map_ctor_exception_notx.cpp BUILD_OPTIONS -DLIBPMEMOBJ_CPP_TESTS_RADIX)
 	add_test_generic(NAME radix_ctor_exceptions_notx TRACERS none memcheck)
+
+	build_test_ext(NAME radix_garbage_collection SRC_FILES radix_tree/radix_garbage_collection.cpp)
+	add_test_generic(NAME radix_garbage_collection TRACERS none memcheck)
 
 	build_test_ext(NAME radix_txabort SRC_FILES map/map_txabort.cpp BUILD_OPTIONS -DLIBPMEMOBJ_CPP_TESTS_RADIX)
 	add_test_generic(NAME radix_txabort TRACERS none memcheck pmemcheck)

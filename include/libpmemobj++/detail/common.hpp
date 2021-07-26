@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-/* Copyright 2016-2020, Intel Corporation */
+/* Copyright 2016-2021, Intel Corporation */
 
 /**
  * @file
@@ -65,6 +65,29 @@
 #include <drd.h>
 #endif
 
+#if LIBPMEMOBJ_CPP_VG_HELGRIND_ENABLED
+
+#define LIBPMEMOBJ_CPP_ANNOTATE_HAPPENS_BEFORE(order, ptr)                     \
+	if (order == std::memory_order_release ||                              \
+	    order == std::memory_order_acq_rel ||                              \
+	    order == std::memory_order_seq_cst) {                              \
+		ANNOTATE_HAPPENS_BEFORE(ptr);                                  \
+	}
+
+#define LIBPMEMOBJ_CPP_ANNOTATE_HAPPENS_AFTER(order, ptr)                      \
+	if (order == std::memory_order_consume ||                              \
+	    order == std::memory_order_acquire ||                              \
+	    order == std::memory_order_acq_rel ||                              \
+	    order == std::memory_order_seq_cst) {                              \
+		ANNOTATE_HAPPENS_AFTER(ptr);                                   \
+	}
+#else
+
+#define LIBPMEMOBJ_CPP_ANNOTATE_HAPPENS_BEFORE(order, ptr)
+#define LIBPMEMOBJ_CPP_ANNOTATE_HAPPENS_AFTER(order, ptr)
+
+#endif
+
 /*
  * Workaround for missing "is_trivially_copyable" in gcc < 5.0.
  * Be aware of a difference between __has_trivial_copy and is_trivially_copyable
@@ -126,6 +149,15 @@ namespace experimental
  */
 namespace detail
 {
+
+#if defined(__x86_64) || defined(_M_X64) || defined(__aarch64__) ||            \
+	defined(__riscv)
+static constexpr size_t CACHELINE_SIZE = 64ULL;
+#elif defined(__PPC64__)
+static constexpr size_t CACHELINE_SIZE = 128ULL;
+#else
+#error unable to recognize architecture at compile time
+#endif
 
 /*
  * Conditionally add 'count' objects to a transaction.
@@ -279,6 +311,18 @@ mssb_index64(uint64_t value)
 }
 
 #endif
+
+static constexpr size_t
+align_up(size_t size, size_t align)
+{
+	return ((size) + (align)-1) & ~((align)-1);
+}
+
+static constexpr size_t
+align_down(size_t size, size_t align)
+{
+	return (size) & ~((align)-1);
+}
 
 } /* namespace detail */
 

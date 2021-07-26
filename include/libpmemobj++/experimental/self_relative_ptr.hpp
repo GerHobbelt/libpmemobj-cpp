@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-/* Copyright 2020, Intel Corporation */
+/* Copyright 2020-2021, Intel Corporation */
 
 /**
  * @file
@@ -21,11 +21,48 @@ namespace obj
 namespace experimental
 {
 
+template <typename T>
+class self_relative_ptr;
+
+template <>
+class self_relative_ptr<void> : public self_relative_ptr_base {
+public:
+	using base_type = self_relative_ptr_base;
+	using this_type = self_relative_ptr;
+	using element_type = void;
+
+	constexpr self_relative_ptr() noexcept = default;
+
+	constexpr self_relative_ptr(std::nullptr_t) noexcept
+	    : self_relative_ptr_base()
+	{
+	}
+
+	self_relative_ptr(element_type *ptr) noexcept
+	    : self_relative_ptr_base(self_offset(ptr))
+	{
+	}
+
+	inline element_type *
+	get() const noexcept
+	{
+		return static_cast<element_type *>(
+			self_relative_ptr_base::to_void_pointer());
+	}
+
+private:
+	difference_type
+	self_offset(element_type *ptr) const noexcept
+	{
+		return base_type::pointer_to_offset(static_cast<void *>(ptr));
+	}
+};
+
 /**
  * Persistent self-relative pointer class.
  *
  * self_relative_ptr implements a smart ptr. It encapsulates the
- * self offseted pointer and provides member access, dereference and array
+ * self offsetted pointer and provides member access, dereference and array
  * access operators.
  *
  * @includedoc shared/pointer_requirements.txt

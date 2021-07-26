@@ -2,9 +2,10 @@
 # Copyright 2018-2021, Intel Corporation
 
 #
-# functions.cmake - helper functions for CMakeLists.txt
+# functions.cmake - helper functions for top-level CMakeLists.txt
 #
 
+# join all ${VALUES} into an ${OUT} string, split with custom ${SEP}arator
 function(join SEP OUT VALUES)
 	string(REPLACE ";" "${SEP}" JOIN_TMP "${VALUES}")
 	set(${OUT} "${JOIN_TMP}" PARENT_SCOPE)
@@ -201,7 +202,7 @@ endfunction()
 # src version shows the current version, as reported by git describe
 # unless git is not available, then it's set to the recently released VERSION
 function(set_source_ver SRCVERSION)
-	# if there's version file commited, use it
+	# if there's version file committed, use it
 	if(EXISTS "${LIBPMEMOBJCPP_ROOT_DIR}/.version")
 		file(STRINGS ${LIBPMEMOBJCPP_ROOT_DIR}/.version FILE_VERSION)
 		set(SRCVERSION ${FILE_VERSION} PARENT_SCOPE)

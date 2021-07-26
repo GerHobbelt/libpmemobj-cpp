@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Copyright 2018-2020, Intel Corporation
+// Copyright 2018-2021, Intel Corporation
 //
 // Modified to test pmem::obj containers
 //
@@ -55,6 +55,11 @@ run(pmem::obj::pool<root> &pop)
 
 		pmem::obj::transaction::run(pop,
 					    [&] { pop.root()->r1->run(); });
+
+		pmem::obj::transaction::run(pop, [&] {
+			pmem::obj::delete_persistent<Testcase1>(pop.root()->r1);
+		});
+
 	} catch (...) {
 		UT_ASSERT(0);
 	}
@@ -78,6 +83,8 @@ test(int argc, char *argv[])
 	}
 
 	run(pop);
+
+	pop.close();
 }
 
 int

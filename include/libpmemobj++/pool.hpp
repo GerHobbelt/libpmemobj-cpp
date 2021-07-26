@@ -10,6 +10,7 @@
 #define LIBPMEMOBJ_CPP_POOL_HPP
 
 #include <cstddef>
+#include <errno.h>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -42,6 +43,9 @@ class persistent_ptr;
  * where providing pool template argument is undesirable. The typical usage
  * example would be:
  * @snippet pool/pool.cpp pool_base_example
+ *
+ * The exmple of using pool with RAII idiom:
+ * @snippet pool/pool_as_class_member.cpp  pool_class_member_example
  */
 class pool_base {
 public:
@@ -108,9 +112,7 @@ public:
 #else
 		pmemobjpool *pop = pmemobj_open(path.c_str(), layout.c_str());
 #endif
-		if (pop == nullptr)
-			throw pmem::pool_error("Failed opening pool")
-				.with_pmemobj_errormsg();
+		check_pool(pop, "opening");
 
 		pmemobj_set_user_data(pop, new detail::pool_data);
 
@@ -144,9 +146,7 @@ public:
 		pmemobjpool *pop = pmemobj_create(path.c_str(), layout.c_str(),
 						  size, mode);
 #endif
-		if (pop == nullptr)
-			throw pmem::pool_error("Failed creating pool")
-				.with_pmemobj_errormsg();
+		check_pool(pop, "creating");
 
 		pmemobj_set_user_data(pop, new detail::pool_data);
 
@@ -191,9 +191,7 @@ public:
 	open(const std::wstring &path, const std::wstring &layout)
 	{
 		pmemobjpool *pop = pmemobj_openW(path.c_str(), layout.c_str());
-		if (pop == nullptr)
-			throw pmem::pool_error("Failed opening pool")
-				.with_pmemobj_errormsg();
+		check_pool(pop, "opening");
 
 		pmemobj_set_user_data(pop, new detail::pool_data);
 
@@ -223,9 +221,7 @@ public:
 	{
 		pmemobjpool *pop = pmemobj_createW(path.c_str(), layout.c_str(),
 						   size, mode);
-		if (pop == nullptr)
-			throw pmem::pool_error("Failed creating pool")
-				.with_pmemobj_errormsg();
+		check_pool(pop, "creating");
 
 		pmemobj_set_user_data(pop, new detail::pool_data);
 
@@ -434,14 +430,35 @@ public:
 	}
 
 protected:
+	static void
+	check_pool(pmemobjpool *pop, std::string mode)
+	{
+		if (pop == nullptr) {
+			if (errno == EINVAL || errno == EFBIG ||
+			    errno == ENOENT || errno == EEXIST) {
+				throw pmem::pool_invalid_argument(
+					"Failed " + mode + " pool")
+					.with_pmemobj_errormsg();
+			} else {
+				throw pmem::pool_error("Failed " + mode +
+						       " pool")
+					.with_pmemobj_errormsg();
+			}
+		}
+	}
+
 	/* The pool opaque handle */
 	PMEMobjpool *pop;
 
 #ifndef _WIN32
-	/* Default create mode */
+	/**
+	 * Default create mode
+	 */
 	static const int DEFAULT_MODE = S_IWUSR | S_IRUSR;
 #else
-	/* Default create mode */
+	/**
+	 * Default create mode
+	 */
 	static const int DEFAULT_MODE = S_IWRITE | S_IREAD;
 #endif
 };

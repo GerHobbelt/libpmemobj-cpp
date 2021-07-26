@@ -2,14 +2,17 @@
 # Copyright 2018-2021, Intel Corporation
 
 cmake_minimum_required(VERSION 3.3)
+
 project(libpmemobj-cpp C CXX)
+set(LIBPMEMOBJCPP_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # ----------------------------------------------------------------- #
 ## Set required and useful variables
 # ----------------------------------------------------------------- #
 set(VERSION_MAJOR 1)
-set(VERSION_MINOR 12)
+set(VERSION_MINOR 13)
 set(VERSION_PATCH 0)
+set(VERSION_PRERELEASE rc1)
 
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
 if(VERSION_PATCH GREATER 0)
@@ -19,32 +22,47 @@ if(VERSION_PRERELEASE)
 	set(VERSION ${VERSION}-${VERSION_PRERELEASE})
 endif()
 
-set(LIBPMEMOBJCPP_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(CXX_STANDARD 14 CACHE STRING "C++ language standard")
+
+set(CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD ${CXX_STANDARD})
+
+# Specify and print the build type
+set(DEFAULT_BUILD_TYPE "RelWithDebInfo")
+set(predefined_build_types
+	Debug
+	Release
+	RelWithDebInfo
+	MinSizeRel)
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE ${DEFAULT_BUILD_TYPE}
+		CACHE STRING "choose the type of build (${predefined_build_types})" FORCE)
+	message(STATUS "CMAKE_BUILD_TYPE not set, setting the default one: ${CMAKE_BUILD_TYPE}")
+else()
+	message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+	if(NOT CMAKE_BUILD_TYPE IN_LIST predefined_build_types)
+		message(WARNING "Unusual build type was set, please make sure it's proper one. "
+			"By default supported are only following: ${predefined_build_types}.")
+	endif()
+endif()
+
+include(${LIBPMEMOBJCPP_ROOT_DIR}/cmake/functions.cmake)
+# set SRCVERSION, it's more accurate and "current" than VERSION
+set_source_ver(SRCVERSION)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${LIBPMEMOBJCPP_ROOT_DIR}/cmake)
+set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 set(LIBPMEMOBJ_REQUIRED_VERSION 1.9)
 set(LIBPMEM_REQUIRED_VERSION 1.7)
 # Only pmreorder in ver. >= 1.9 guarantees reliable output
 set(PMREORDER_REQUIRED_VERSION 1.9)
 
-set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
-
-# Treat CMAKE_CXX_STANDARD as a requirement
-set(CXX_STANDARD_REQUIRED ON)
-
-set(CXX_STANDARD 14 CACHE STRING "C++ language standard")
-set(CMAKE_CXX_STANDARD ${CXX_STANDARD})
+set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/test CACHE STRING "working directory for tests")
+message(STATUS "TEST_DIR set to: \"${TEST_DIR}\"")
 
 # Do not treat include directories from the interfaces
 # of consumed Imported Targets as SYSTEM by default.
 set(CMAKE_NO_SYSTEM_FROM_IMPORTED 1)
-
-set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR}/test CACHE STRING "working directory for tests")
-message(STATUS "TEST_DIR set to: \"${TEST_DIR}\"")
-
-if(NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE "Debug")
-endif()
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${LIBPMEMOBJCPP_ROOT_DIR}/cmake)
 
 # ----------------------------------------------------------------- #
 ## CMake build options
@@ -54,13 +72,13 @@ option(BUILD_TESTS "build tests" ON)
 option(BUILD_DOC "build documentation" ON)
 option(BUILD_BENCHMARKS "build benchmarks" ON)
 
-option(COVERAGE "run coverage test" OFF)
+option(COVERAGE "enable collecting of coverage data" OFF)
 option(DEVELOPER_MODE "enable developer checks" OFF)
 option(CHECK_CPP_STYLE "check code style of C++ sources" OFF)
 option(TRACE_TESTS "more verbose test outputs" OFF)
 option(USE_ASAN "enable AddressSanitizer (debugging)" OFF)
 option(USE_UBSAN "enable UndefinedBehaviorSanitizer (debugging)" OFF)
-option(USE_CCACHE "Use ccache if it is available in the system" ON)
+option(USE_CCACHE "use ccache if it is available in the system" ON)
 
 option(TESTS_USE_FORCED_PMEM "run tests with PMEM_IS_PMEM_FORCE=1 - it speeds up tests execution on emulated pmem" OFF)
 option(TESTS_USE_VALGRIND "enable tests with valgrind (fail build if Valgrind not found)" ON)
@@ -82,6 +100,7 @@ option(TEST_ENUMERABLE_THREAD_SPECIFIC "enable testing of pmem::obj::enumerable_
 option(TEST_CONCURRENT_MAP "enable testing of pmem::obj::experimental::concurrent_map (depends on TEST_STRING)" ON)
 option(TEST_SELF_RELATIVE_POINTER "enable testing of pmem::obj::experimental::self_relative_ptr" ON)
 option(TEST_RADIX_TREE "enable testing of pmem::obj::experimental::radix_tree" ON)
+option(TEST_MPSC_QUEUE "enable testing of pmem::obj::experimental::mpsc_queue" ON)
 
 # ----------------------------------------------------------------- #
 ## Setup environment, find packages, set compiler's flags,
@@ -95,9 +114,11 @@ include(CheckCXXSourceCompiles)
 include(CheckCXXCompilerFlag)
 include(GNUInstallDirs)
 
-include(${LIBPMEMOBJCPP_ROOT_DIR}/cmake/functions.cmake)
-# set SRCVERSION, it's more accurate and "current" than VERSION
-set_source_ver(SRCVERSION)
+# Configure the ccache as compiler launcher
+find_program(CCACHE_FOUND ccache)
+if(USE_CCACHE AND CCACHE_FOUND)
+	set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+endif()
 
 if(WIN32)
 	# Required for MSVC to correctly define __cplusplus
@@ -108,13 +129,7 @@ if(NOT WIN32)
 	find_package(PkgConfig QUIET)
 endif()
 
-# Configure the ccache as compiler launcher
-find_program(CCACHE_FOUND ccache)
-if(USE_CCACHE AND CCACHE_FOUND)
-	set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-endif()
-
-# Find Valgrind
+# Finds valgrind and checks for pmemcheck's availability
 if(PKG_CONFIG_FOUND)
 	pkg_check_modules(VALGRIND QUIET valgrind)
 else()
@@ -122,6 +137,8 @@ else()
 endif()
 
 if(VALGRIND_FOUND)
+	message(STATUS "Found Valgrind in '${VALGRIND_LIBRARY_DIRS}' (version: ${VALGRIND_VERSION})")
+
 	add_flag(-DLIBPMEMOBJ_CPP_VG_MEMCHECK_ENABLED=1)
 	add_flag(-DLIBPMEMOBJ_CPP_VG_DRD_ENABLED=1)
 	add_flag(-DLIBPMEMOBJ_CPP_VG_HELGRIND_ENABLED=1)
@@ -132,14 +149,10 @@ if(VALGRIND_FOUND)
 	if(VALGRIND_PMEMCHECK_FOUND)
 		add_flag(-DLIBPMEMOBJ_CPP_VG_PMEMCHECK_ENABLED=1)
 	endif()
-endif()
-
-# Find Clang
-find_program(CLANG NAMES clang)
-if(CLANG)
-	message(STATUS "Found clang: ${CLANG} (version: ${CLANG_VERSION})")
-else()
-	message(STATUS "clang not found")
+elseif(NOT VALGRIND_FOUND AND TESTS_USE_VALGRIND)
+	message(FATAL_ERROR "Valgrind not found, but flag TESTS_USE_VALGRIND was set.")
+elseif(NOT VALGRIND_FOUND)
+	message(WARNING "Valgrind not found. Valgrind tests will not be performed.")
 endif()
 
 if(BUILD_TESTS OR BUILD_EXAMPLES OR BUILD_BENCHMARKS)
@@ -154,10 +167,9 @@ if(BUILD_TESTS OR BUILD_EXAMPLES OR BUILD_BENCHMARKS)
 
 	# Some tests and examples require clang >= 8.0, because of the bug
 	# (https://bugs.llvm.org/show_bug.cgi?id=28280), which is fixed in clang v8.0.
-	set(CLANG_REQUIRED_BY_DESTRUCTOR_REFERENCE_BUG "8.0")
-	if(CLANG)
-		get_program_version_major_minor(${CLANG} CLANG_VERSION)
-		if(CLANG_VERSION VERSION_LESS CLANG_REQUIRED_BY_DESTRUCTOR_REFERENCE_BUG)
+
+	if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang" AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+		if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "8.0")
 			set(CLANG_DESTRUCTOR_REFERENCE_BUG_PRESENT 1)
 		endif()
 	endif()
@@ -299,7 +311,7 @@ endif()
 if(BUILD_EXAMPLES AND NO_GCC_VARIADIC_TEMPLATE_BUG)
 	add_subdirectory(examples)
 elseif(BUILD_EXAMPLES)
-	message(WARNING "Skipping building of examples because of compiler issue")
+	message(WARNING "Skipping building of examples because of gcc variadic template bug")
 endif()
 
 if(NOT "${CPACK_GENERATOR}" STREQUAL "")

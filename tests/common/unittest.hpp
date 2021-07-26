@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-/* Copyright 2018-2020, Intel Corporation */
+/* Copyright 2018-2021, Intel Corporation */
 
 #ifndef LIBPMEMOBJ_CPP_UNITTEST_HPP
 #define LIBPMEMOBJ_CPP_UNITTEST_HPP
@@ -18,6 +18,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <type_traits>
+
+#include <libpmemobj++/pool.hpp>
+#include <libpmemobj/iterator_base.h>
 
 #ifndef _WIN32
 #define os_stat_t struct stat
@@ -175,6 +178,12 @@ ut_stat(const char *file, int line, const char *func, const char *path,
 				 STR(type), checkpoint, off);                  \
 	} while (0)
 
+#define ASSERT_UNREACHABLE                                                     \
+	do {                                                                   \
+		UT_FATAL("%s:%d in function %s should never be reached",       \
+			 __FILE__, __LINE__, __func__);                        \
+	} while (0)
+
 static inline int
 run_test(std::function<void()> test)
 {
@@ -190,6 +199,21 @@ run_test(std::function<void()> test)
 	}
 
 	return 0;
+}
+
+/* Returns number of objects allocated via pmemobj */
+static inline int
+num_allocs(pmem::obj::pool_base &pop)
+{
+	auto oid = pmemobj_first(pop.handle());
+	int num = 0;
+
+	while (!OID_IS_NULL(oid)) {
+		num++;
+		oid = pmemobj_next(oid);
+	}
+
+	return num;
 }
 
 #endif /* LIBPMEMOBJ_CPP_UNITTEST_HPP */

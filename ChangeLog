@@ -1,3 +1,57 @@
+Wed Jul 21 2021 Igor Chorążewicz <igor.chorazewicz@intel.com>
+
+	* Version 1.13.0-rc1
+
+	This release introduces new concurrent data structure - MPSC queue and
+	implements limited concurrency support for radix tree.
+
+	New features:
+	- Introduce experimental MPSC queue (pmem::obj::experimental::mpsc_queue)
+	- Implement support for multi-reader single-writer concurrency in
+		pmem::obj::experimental::radix_tree
+	- Introduce basic_dram_inline_string which can be kept both on pmem and
+		dram
+
+	Bug fixes:
+	- Fix radix_tree leaf layout to ensure proper key/value alignment
+
+	Other changes:
+	- Switch default CMake's build type from "Debug" to "RelWithDebInfo"
+		it's relevant for a GitHub users (who may e.g. run some benchmarks)
+	- Add std::initializer_list constructor to pmem::obj::array to mimic
+		aggregate initialization post C++20
+
+Tue Jul 06 2021 Łukasz Stolarczuk <lukasz.stolarczuk@intel.com>
+
+	* Version 1.6.1
+
+	This release fixes minor bugs.
+
+	This is the last patch release for libpmemobj-cpp 1.6 version.
+	Maintenance of this version is no longer supported.
+
+	Notable changes:
+	- string: fix max_size() return value
+	- allocation_flag: mark constructor as explicit
+	- peristent_ptr: change ptr_offset_magic to be properly aligned
+	- fix few headers' includes
+
+Mon Jun 28 2021 Łukasz Stolarczuk <lukasz.stolarczuk@intel.com>
+
+	* Version 1.5.2
+
+	This release fixes minor bugs.
+
+	This is the last patch release for libpmemobj-cpp 1.5 version.
+	Maintenance of this version is no longer supported.
+
+	Notable changes:
+	- operator[] for contiguous_iterator takes signed integral instead of
+		unsigned
+	- throw an exception when pmemobj_mutex_unlock fail
+	- fix crash when a previous transaction failed to start because of
+		already taken lock.
+
 Mon Feb 15 2021 Igor Chorążewicz <igor.chorazewicz@intel.com>
 
 	* Version 1.12
@@ -43,7 +97,7 @@ Wed Sep 30 2020 Szymon Romik <szymon.romik@intel.com>
 	- string_view class (support for compilers older than C++17)
 	- experimental self_relative_ptr and std::atomic<self_relative_ptr>
 		specialization (persistent smart ptr which encapsulates the self
-		offseted pointer and provides member access, dereference and
+		offsetted pointer and provides member access, dereference and
 		array access operators - for some workloads it could be faster
 		alternative for persistent_ptr)
 
@@ -73,7 +127,7 @@ Thu May 28 2020 Szymon Romik <szymon.romik@intel.com>
 
 	Optimizations:
 	- optimized clear() and erase() for trivial types in segment_vector
-	- optimized move constructor and assignement for basic_string
+	- optimized move constructor and assignment for basic_string
 
 	Bug Fixes:
 	- fixed free_data() in concurrent_hash_map
@@ -201,7 +255,7 @@ Fri Mar 15 2019 Igor Chorążewicz <igor.chorazewicz@intel.com>
 	- decrease number of persistent_ptr dereferences in
 	  make_persistent_array
 
-Tue Feb 19 2018 Marcin Ślusarz <marcin.slusarz@intel.com>
+Tue Feb 19 2019 Marcin Ślusarz <marcin.slusarz@intel.com>
 
 	* Version 1.5.1
 
