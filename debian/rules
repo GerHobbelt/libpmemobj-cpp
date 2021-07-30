@@ -14,12 +14,12 @@ override_dh_auto_install:
 override_dh_auto_configure:
 	dh_auto_configure -- -DTESTS_USE_FORCED_PMEM=1 -DTESTS_TBB=ON
 
-TEST_EXCLUDES := -E cond_var_posix_0_helgrind
+TEST_EXCLUDES := cond_var_posix_0_helgrind
 ifeq ($(DEB_HOST_ARCH),ppc64el)
-TEST_EXCLUDES += -E mpsc_.* -E concurrent_hash_map_layout_0_none
+TEST_EXCLUDES := $(TEST_EXCLUDES)|mpsc_.*|concurrent_hash_map_layout_0_none
 endif
 
 override_dh_auto_test:
 	cd obj-$(DEB_HOST_GNU_TYPE) && \
 		ctest -j `nproc` --output-on-failure --force-new-ctest-process \
-			$(TEST_EXCLUDES)
+			-E '$(TEST_EXCLUDES)'
