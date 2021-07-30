@@ -1,3 +1,10 @@
+libpmemobj-cpp (1.13.0-1) experimental; urgency=medium
+
+  * New upstream release.
+  * Correct ctest exclusion syntax.
+
+ -- Adam Borowski <kilobyte@angband.pl>  Fri, 30 Jul 2021 11:47:40 +0200
+
 libpmemobj-cpp (1.13.0~rc2-1) experimental; urgency=medium
 
   * Sweep some tests on ppc64el under the carpet.
