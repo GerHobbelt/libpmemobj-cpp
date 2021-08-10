@@ -1,3 +1,9 @@
+libpmemobj-cpp (1.13.0-2) unstable; urgency=medium
+
+  * Upload to unstable.
+
+ -- Adam Borowski <kilobyte@angband.pl>  Tue, 10 Aug 2021 16:41:08 +0200
+
 libpmemobj-cpp (1.13.0-1) experimental; urgency=medium
 
   * New upstream release.
