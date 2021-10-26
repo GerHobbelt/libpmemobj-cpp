@@ -1,3 +1,12 @@
+libpmemobj-cpp (1.13.0-3) unstable; urgency=medium
+
+  * Don't use libunwind for stack traces in the test suite, it fares poorly
+    under valgrind.  Closes: #997065.
+  * Enable riscv64.
+  * Drop a copyright entry for rewritten check-license.
+
+ -- Adam Borowski <kilobyte@angband.pl>  Tue, 26 Oct 2021 18:10:22 +0200
+
 libpmemobj-cpp (1.13.0-2) unstable; urgency=medium
 
   * Upload to unstable.
