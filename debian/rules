@@ -11,8 +11,11 @@ export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
 override_dh_auto_install:
 	dh_auto_install -X .md5
 
+ifeq ($(DEB_HOST_ARCH),riscv64)
+CONF_ARCH := -DTESTS_USE_VALGRIND=OFF
+endif
 override_dh_auto_configure:
-	dh_auto_configure -- -DTESTS_USE_FORCED_PMEM=1 -DTESTS_TBB=ON -DUSE_LIBUNWIND=OFF
+	dh_auto_configure -- -DTESTS_USE_FORCED_PMEM=1 -DTESTS_TBB=ON -DUSE_LIBUNWIND=OFF $(CONF_ARCH)
 
 TEST_EXCLUDES := cond_var_posix_0_helgrind
 ifeq ($(DEB_HOST_ARCH),ppc64el)
