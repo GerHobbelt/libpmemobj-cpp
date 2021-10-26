@@ -10,7 +10,6 @@ Build-Depends: cmake,
                libpmemobj-dev (>= 1.9~),
                libsfml-dev,
                libtbb-dev,
-               libunwind-dev,
                pkg-config,
                valgrind
 Standards-Version: 4.5.1
