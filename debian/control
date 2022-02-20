@@ -11,7 +11,7 @@ Build-Depends: cmake,
                libsfml-dev,
                libtbb-dev,
                pkg-config,
-               valgrind [!riscv64]
+               valgrind-if-available,
 Standards-Version: 4.6.0
 Rules-Requires-Root: no
 Section: libs
