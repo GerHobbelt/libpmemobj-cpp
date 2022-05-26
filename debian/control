@@ -12,7 +12,7 @@ Build-Depends: cmake,
                libtbb-dev,
                pkg-config,
                valgrind-if-available,
-Standards-Version: 4.6.0
+Standards-Version: 4.6.1
 Rules-Requires-Root: no
 Section: libs
 Homepage: https://pmem.io/pmdk/cpp_obj/
