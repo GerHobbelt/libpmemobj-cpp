@@ -1,3 +1,11 @@
+libpmemobj-cpp (1.13.0-4) unstable; urgency=medium
+
+  * Use valgrind-if-supported.
+  * Temporarily drop B-Dep on libtbb-dev, it's used only for some tests.
+    Closes: #1011506, #1011658.
+
+ -- Adam Borowski <kilobyte@angband.pl>  Thu, 26 May 2022 15:39:16 +0200
+
 libpmemobj-cpp (1.13.0-3) unstable; urgency=medium
 
   * Don't use libunwind for stack traces in the test suite, it fares poorly
