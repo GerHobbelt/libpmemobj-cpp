@@ -9,7 +9,6 @@ Build-Depends: cmake,
                libncurses5-dev,
                libpmemobj-dev (>= 1.9~),
                libsfml-dev,
-               libtbb-dev,
                pkg-config,
                valgrind-if-available,
 Standards-Version: 4.6.1
