@@ -1,3 +1,11 @@
+libpmemobj-cpp (1.13.0-6) unstable; urgency=medium
+
+  * Add suppressions for valgrind/memcheck for strcmp vectoring.
+    Closes: #1015094.
+  * Force LTO, to verify that closes: #1015510 is ok.
+
+ -- Adam Borowski <kilobyte@angband.pl>  Sat, 23 Jul 2022 02:34:53 +0200
+
 libpmemobj-cpp (1.13.0-5) unstable; urgency=medium
 
   * Fix FTBFS with gcc-12.  Closes: #1012986.
