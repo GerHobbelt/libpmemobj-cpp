@@ -2,6 +2,5 @@
    <string cmp vectorization, libpmemobj-cpp #1262>
    Memcheck:Addr32
    fun:__wmemcmp_avx2_movbe
-   fun:compare
    ...
 }
