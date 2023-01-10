@@ -7,7 +7,7 @@ Build-Depends: cmake,
                gdb,
                graphviz,
                libncurses5-dev,
-               libpmemobj-dev (>= 1.9~),
+               libpmemobj-dev (>= 1.12~),
                libsfml-dev,
                pkg-config,
                valgrind-if-available,
@@ -22,7 +22,7 @@ Package: libpmemobj-cpp-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: libpmemobj-dev (>= 1.9~), ${misc:Depends}, ${shlibs:Depends}
+Depends: libpmemobj-dev (>= 1.12~), ${misc:Depends}, ${shlibs:Depends}
 Description: C++ bindings to libpmemobj
  The C++ bindings provide an easier to use (and thus less error prone
  version) of libpmemobj -- the persistent memory object store -- through
