@@ -1,3 +1,13 @@
+libpmemobj-cpp (1.13.0-7) unstable; urgency=medium
+
+  * Update the homepage.
+  * Set architecture to "any".
+  * Bump dependency on libpmemobj to 1.12.
+  * Fix syntax for enabling LTO; adjust valgrind suppressions wrt newly
+    inlined functions due to LTO.
+
+ -- Adam Borowski <kilobyte@angband.pl>  Tue, 10 Jan 2023 14:33:29 +0100
+
 libpmemobj-cpp (1.13.0-6) unstable; urgency=medium
 
   * Add suppressions for valgrind/memcheck for strcmp vectoring.
